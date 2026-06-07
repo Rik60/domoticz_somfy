@@ -1,10 +1,6 @@
 ###################################################################################
 # Tahoma/Connexoon IO blind plugin
 #
-#
-# All credits for the plugin are for Nonolk, who is the origin plugin creator
-#
-#
 ###################################################################################
 """
 <plugin key="tahomaIO" name="Somfy Tahoma or Connexoon plugin" author="MadPatrick" version="5.3.3" externallink="https://github.com/MadPatrick/somfy">
@@ -379,14 +375,7 @@ class BasePlugin:
 
         self.create_devices(filtered_devices)
 
-        self.create_connection_device()
-
-        # --- LOCAL REACHABILITY CHECK ---
-        # For local modes, verify the box is physically reachable before reporting
-        # Connected. get_gateways() makes a direct call to the local box (not the
-        # cloud), so it will fail if the box is powered off or unreachable on the
-        # local network. This prevents the Connection Status showing "Connected"
-        # when the plugin is restarted while the box is unplugged.
+        # --- GATEWAY INFO OPHALEN (alleen local) ---
         if self.local:
             try:
                 gateways = self.tahoma.get_gateways()
@@ -397,19 +386,15 @@ class BasePlugin:
                 )
                 logging.debug("Gateway info: " + str(self._gateway_info))
             except Exception as e:
-                Domoticz.Error(f"Local box not reachable during startup: {e}")
-                logging.error(f"Local box not reachable during startup: {e}")
-                self._last_error = "Box not reachable"
-                self.update_connection_device(False)
-                self.connected = False
-                self.enabled = True   # Keep enabled so heartbeat can retry
-                return False
+                Domoticz.Error("Failed to get gateway info: " + str(e))
+                logging.error("Failed to get gateway info: " + str(e))
+
+        self.create_connection_device()
 
         # --- STATUS UPDATEN ---
         self.update_devices_status(utils.filter_states(filtered_devices))
 
         self._last_connected_time = datetime.datetime.now()
-        self.connected = True
         self.update_connection_device(True)
 
         return True
