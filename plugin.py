@@ -377,22 +377,16 @@ class BasePlugin:
         return True
 
     def _do_reconnect(self):
-        """Attempt to re-login and re-register the listener after repeated login failures."""
-        Domoticz.Log(f"Reconnect poging na {self._login_fail_count} aaneengesloten login mislukkingen")
-        logging.warning(f"Attempting reconnect after {self._login_fail_count} consecutive login failures")
-        # Reset the counter first so a failing reconnect doesn't trigger another immediate reconnect
-        self._login_fail_count = 0
+        Domoticz.Log("Trying to reconnect/re-login to Tahoma...")
         try:
-            self.tahoma.tahoma_login(str(Parameters["Username"]), str(Parameters["Password"]))
-            if self.tahoma.logged_in:
-                self.tahoma.register_listener()
-                Domoticz.Log("Reconnect geslaagd")
-                logging.info("Reconnect succeeded")
-                return True
+            if self.local:
+                self.tahoma.tahoma_login(str(Parameters["Mode1"]), str(Parameters["Mode2"]), str(Parameters["Mode3"]))
+            else:
+                self.tahoma.tahoma_login(str(Parameters["Username"]), str(Parameters["Password"]))
+            Domoticz.Log("Reconnect successful.")
+            self._login_fail_count = 0
         except Exception as e:
-            Domoticz.Error(f"Reconnect mislukt: {e}")
-            logging.error(f"Reconnect failed: {e}")
-        return False
+            Domoticz.Error(f"Reconnect failed, will try again next heartbeat: {e}")
 
     def onStop(self):
         logging.info("Plugin stopped")
