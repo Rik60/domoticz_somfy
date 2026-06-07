@@ -45,8 +45,9 @@ class Tahoma:
         if self.__logged_in and (self.__expiry_date >= datetime.datetime.now()):
             return True
         elif self.__logged_in and (self.__expiry_date < datetime.datetime.now()):
-            # Only ask Tahoma server if session expired, not when we know we're logged out
-            self.__logged_in = self.get_login()
+            # Session expired â€“ mark as logged out; caller (get_devices/get_events) must re-login
+            logging.debug("logged_in: session expired, marking as logged out")
+            self.__logged_in = False
         return self.__logged_in
 
     def get_login(self):
