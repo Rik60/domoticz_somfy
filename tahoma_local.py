@@ -238,7 +238,8 @@ class SomfyBox(TahomaWebApi):
                 "get device response: status '" +
                 str(response.status_code) +
                 "' response body: '" +
-                str(data) + "'"
+                str(data) +
+                "'"
             )
             logging.debug(
                 "succeeded to get local API devices: " +
@@ -328,18 +329,23 @@ class SomfyBox(TahomaWebApi):
     def send_command(self, json_data):
         if self.token is None or self.token == "0":
             raise exceptions.TahomaException("No token has been provided")
-        logging.info("Sending command to local api")
-        logging.debug("onCommand: data '"+str(json_data)+"'")
+
+        # Domoticz logging is used here instead of Python logging because
+        # Domoticz reliably displays these messages in its own log.
+        command_text = json.dumps(json_data, sort_keys=True)
+        Domoticz.Status("Sending command to local api: " + command_text)
+
         try:
             with _suppress_insecure_warning():
                 response = requests.post(self.base_url_local + "/exec/apply", headers=self.headers_with_token, json=json_data, verify=self.verify, timeout=self.timeout)
         except requests.exceptions.RequestException as exp:
-            logging.error("Send command returns RequestException: " + str(exp))
+            Domoticz.Error("Send command returns RequestException: " + str(exp))
             raise exceptions.TahomaException("Network error while sending command: " + str(exp))
+
+        Domoticz.Status("Local API response status: " + str(response.status_code))
         if response.status_code != 200:
             utils.handle_response(response, "send command")
         data = utils.response_json(response, "send command")
-        logging.debug("command response: status '" + str(response.status_code) + "' response body: '"+str(data)+"'")
-        logging.debug("succeeded to post command: " + str(data))
+        Domoticz.Status("Local API command response: " + json.dumps(data, sort_keys=True))
         self.execId = data['execId']
         return data
