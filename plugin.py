@@ -1018,8 +1018,26 @@ class BasePlugin:
 
             logging.debug("create_devices: check if need to create device: "+device["label"]) 
 
-            if device["deviceURL"] in Devices:
+            device_url = device["deviceURL"]
+            if device_url in Devices:
                 logging.debug("create_devices: device bestaat al, overslaan: " + device["label"])
+                if device["definition"]["uiClass"] == "RollerShutter":
+                    existing_units = Devices[device_url].Units
+                    if 4 not in existing_units:
+                        deviceType = 244
+                        swtype = 21
+                        subtype2 = 73
+                        used = 1
+                        Domoticz.Unit(
+                            Name=device["label"] + " discreet",
+                            Unit=4,
+                            Type=deviceType,
+                            Subtype=subtype2,
+                            Switchtype=swtype,
+                            DeviceID=device_url,
+                            Used=used
+                        ).Create()
+                        Domoticz.Log("Added discreet unit 4 for existing roller shutter: " + device["label"])
                 continue
 
             swtype = None
