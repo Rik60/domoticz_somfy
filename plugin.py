@@ -640,13 +640,6 @@ class BasePlugin:
                 commands["name"] = "stop"
             elif "Set Level" in Command:
                 commands["name"] = "setClosure"
-                # Reverted to the pre-5.3.6 behavior at the user's request:
-                # always invert on send, Awning included. The device-class-
-                # aware mapping (matching update_devices_status()'s read-side
-                # Awning special case) technically closed the loop for #100,
-                # but didn't match this Awning hardware's actual behavior in
-                # practice - the always-invert convention below is what the
-                # user wants back.
                 tmp = max(100 - int(Level), 0)
                 params.append(tmp)
                 commands["parameters"] = params
@@ -656,9 +649,6 @@ class BasePlugin:
         elif Unit == 2:
             if "Set Level" in Command:
                 commands["name"] = "setOrientation"
-                # update_devices_status() reads core:SlateOrientationState
-                # verbatim (no inversion) for all device classes, so the
-                # value sent here must match, not be inverted.
                 tmp = max(int(Level), 1)
                 params.append(tmp)
                 commands["parameters"] = params
@@ -670,6 +660,23 @@ class BasePlugin:
                 commands["name"] = "my"
             else:
                 Domoticz.Error(f"Command {Command} not supported for unit 3")
+                return False
+        elif Unit == 4:
+            if Command in ("Off", "Close"):
+                commands["name"] = "setClosureAndLinearSpeed"
+                params.extend([0, "discreet"])
+                commands["parameters"] = params
+            elif Command in ("On", "Open"):
+                commands["name"] = "setClosureAndLinearSpeed"
+                params.extend([100, "discreet"])
+                commands["parameters"] = params
+            elif "Set Level" in Command:
+                commands["name"] = "setClosureAndLinearSpeed"
+                tmp = max(100 - int(Level), 0)
+                params.extend([tmp, "discreet"])
+                commands["parameters"] = params
+            else:
+                Domoticz.Error(f"Command {Command} not supported for unit 4")
                 return False
         else:
             Domoticz.Error(f"Unit {Unit} not supported")
@@ -1009,7 +1016,7 @@ class BasePlugin:
                 logging.debug("create_device: device in filter_list is of type string, need to convert")
                 device = json.loads(device)
 
-            logging.debug("create_devices: check if need to create device: "+device["label"])
+            logging.debug("create_devices: check if need to create device: "+device["label"]) 
 
             if device["deviceURL"] in Devices:
                 logging.debug("create_devices: device bestaat al, overslaan: " + device["label"])
@@ -1047,6 +1054,9 @@ class BasePlugin:
             if device["definition"]["uiClass"] in ("VenetianBlind", "ExteriorVenetianBlind"):
                 Domoticz.Unit(Name=device["label"] + " up/down", Unit=1, Type=deviceType, Subtype=subtype2, Switchtype=swtype, DeviceID=device["deviceURL"], Used=used).Create()
                 Domoticz.Unit(Name=device["label"] + " orientation", Unit=2, Type=244, Subtype=73, Switchtype=swtype, DeviceID=device["deviceURL"], Used=used).Create()
+            elif device["definition"]["uiClass"] == "RollerShutter":
+                Domoticz.Unit(Name=device["label"], Unit=1, Type=deviceType, Subtype=subtype2, Switchtype=swtype, DeviceID=device["deviceURL"], Used=used).Create()
+                Domoticz.Unit(Name=device["label"] + " discreet", Unit=4, Type=deviceType, Subtype=subtype2, Switchtype=swtype, DeviceID=device["deviceURL"], Used=used).Create()
             else:
                 Domoticz.Unit(Name=device["label"], Unit=1, Type=deviceType, Subtype=subtype2, Switchtype=swtype, DeviceID=device["deviceURL"], Used=used).Create()
 
@@ -1152,13 +1162,6 @@ class BasePlugin:
 
             if log:
                 Domoticz.Log("Config.txt loaded.")
-                # Domoticz.Log(
-                #     f"Domoticz @ {self.domoticz_host}:{self.domoticz_port} | "
-                #     f"Polling intervals Day / Night: {self.dayInterval}s / {self.nightInterval}s | "
-                #     f"Temp: {self.temp_delay}s delay for {self.temp_time}s | "
-                #     f"Sunset and Sunrise refresh time: {self.sun_refresh_time} | "
-                #     f"Sunrise delay: {self.sunriseDelay}m, Sunset delay: {self.sunsetDelay}m"
-                # )
         except Exception as e:
             Domoticz.Error(f"Error in load_config_txt: {str(e)}")
 
